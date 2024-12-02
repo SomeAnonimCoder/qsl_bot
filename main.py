@@ -52,13 +52,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # /help Command: Provide detailed descriptions
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
-        "Available commands:\n"
-        "1. /start: Register your account. Required to use other commands.\n"
-        "2. /logcontact: Log a contact by selecting a user and sharing your geolocation.\n"
-        "3. /change_username: Update your username in the system.\n"
-        "4. /menu: Display a menu of available commands.\n"
-        "5. /help: Show this help message with detailed descriptions.\n\n"
-        "For further assistance, contact the bot admin."
+            "Use the following commands to interact with the bot:\n"
+            "- /logcontact: Log a contact with geolocation.\n"
+            "- /logswl: Log a single-way contact with geolocation.\n"
+            "- /change_username: Change your registered username.\n"
+            "- /help: Get detailed information about commands."
     )
     await update.message.reply_text(help_text)
 
@@ -109,16 +107,17 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
 
     reply_markup = ReplyKeyboardMarkup(band_keyboard, one_time_keyboard=True, resize_keyboard=True)
     context.user_data["contact_with"] = contact_with_username
-
     await update.message.reply_text("Please select the band for this contact.", reply_markup=reply_markup)
     context.user_data["state"] = "WAITING_FOR_BAND_SELECTION"
 
 # Handle the band selection for the contact
 async def handle_band_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(context)
     if context.user_data.get("state") != "WAITING_FOR_BAND_SELECTION":
         return
 
     selected_band = update.message.text
+    print(selected_band)
     if selected_band.lower() == "cancel":
         await update.message.reply_text("Band selection canceled.")
         context.user_data.clear()
@@ -141,6 +140,7 @@ async def handle_band_selection(update: Update, context: ContextTypes.DEFAULT_TY
         ))
         context.user_data["state"] = "WAITING_FOR_CONTACT_LOCATION"
     else:
+        print(selected_band)
         await update.message.reply_text("Invalid band selection. Please try again.")
     cursor.close()
     conn.close()
