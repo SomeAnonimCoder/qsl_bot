@@ -112,7 +112,7 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
 
 # Handle the band selection for the contact
 async def handle_band_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(context)
+    print('here!')
     if context.user_data.get("state") != "WAITING_FOR_BAND_SELECTION":
         return
 
@@ -151,6 +151,7 @@ async def handle_contact_location(update: Update, context: ContextTypes.DEFAULT_
         return
 
     location = update.message.location
+    context.user_data['location'] = location
     if not location:
         await update.message.reply_text("You need to share your location to log the contact.")
         return
@@ -169,6 +170,7 @@ async def handle_contact_location(update: Update, context: ContextTypes.DEFAULT_
     cursor.execute("SELECT id FROM Users WHERE username = %s", (contact_with_username,))
     contact_with_id = cursor.fetchone()[0]
 
+
     # Confirm the contact details
     confirmation_text = (
         f"Confirm the contact details:\n"
@@ -178,8 +180,13 @@ async def handle_contact_location(update: Update, context: ContextTypes.DEFAULT_
         f"Timestamp: {timestamp}\n\n"
         "Type 'Confirm' to log this contact, or 'Cancel' to discard."
     )
+    keyboard = [
+        [KeyboardButton('Confirm')],
+        [KeyboardButton('Cancel')]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
 
-    await update.message.reply_text(confirmation_text)
+    await update.message.reply_text(confirmation_text, reply_markup=reply_markup)
 
     context.user_data["state"] = "WAITING_FOR_CONFIRMATION"
     cursor.close()
@@ -190,6 +197,24 @@ async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE
     if context.user_data.get("state") != "WAITING_FOR_CONFIRMATION":
         return
 
+    user_id = update.message.from_user.id
+    contact_with_username = context.user_data["contact_with"]
+    band_id = context.user_data["band_id"]
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    latitude = context.user_data['location'].latitude
+    longitude = context.user_data['location'].longitude
+
+    conn = db_connection()
+    cursor = conn.cursor()
+
+    # Fetch the contact user's ID
+    cursor.execute("SELECT id FROM Users WHERE username = %s", (contact_with_username,))
+    contact_with_id = cursor.fetchone()[0]
+
+    # Fetch the contact user's ID
+    cursor.execute("SELECT id FROM Users WHERE telegram_id = %s", (user_id,))
+    contact_from_id = cursor.fetchone()[0]
+
     user_input = update.message.text.lower()
     if user_input == "confirm":
         conn = db_connection()
@@ -197,9 +222,9 @@ async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Insert contact log with band and location
         cursor.execute(
-            "INSERT INTO Contacts (user_id, contact_with_id, timestamp, latitude, longitude, band_id) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (user_id, contact_with_id, timestamp, latitude, longitude, band_id)
+            "INSERT INTO Contacts (user_id, contact_with_id, timestamp, location, band_id) "
+            "VALUES (%s, %s, %s, POINT(%s, %s), %s)",
+            (contact_from_id, contact_with_id, timestamp, latitude, longitude, band_id)
         )
         conn.commit()
         await update.message.reply_text("Contact logged successfully!")
@@ -247,6 +272,8 @@ async def log_swl(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Handle the SWL contact selection
 async def handle_swl_contact_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print('handle_swl_contact_selection')
+
     if context.user_data.get("state") != "WAITING_FOR_SWL_SELECTION":
         return
 
@@ -268,6 +295,7 @@ async def handle_swl_contact_selection(update: Update, context: ContextTypes.DEF
 
 # Handle the band selection for the SWL
 async def handle_swl_band_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print('handle_swl_band_selection')
     if context.user_data.get("state") != "WAITING_FOR_SWL_BAND_SELECTION":
         return
 
@@ -300,6 +328,7 @@ async def handle_swl_band_selection(update: Update, context: ContextTypes.DEFAUL
 
 # Handle the geolocation for the SWL
 async def handle_swl_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print('handle_swl_location')
     if context.user_data.get("state") != "WAITING_FOR_SWL_LOCATION":
         return
 
@@ -314,6 +343,7 @@ async def handle_swl_location(update: Update, context: ContextTypes.DEFAULT_TYPE
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     latitude = location.latitude
     longitude = location.longitude
+    context.user_data['location'] = location
 
     conn = db_connection()
     cursor = conn.cursor()
@@ -331,8 +361,13 @@ async def handle_swl_location(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"Timestamp: {timestamp}\n\n"
         "Type 'Confirm' to log this SWL, or 'Cancel' to discard."
     )
+    keyboard = [
+        [KeyboardButton('Confirm')],
+        [KeyboardButton('Cancel')]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
 
-    await update.message.reply_text(confirmation_text)
+    await update.message.reply_text(confirmation_text, reply_markup=reply_markup)
 
     context.user_data["state"] = "WAITING_FOR_SWL_CONFIRMATION"
     cursor.close()
@@ -340,19 +375,35 @@ async def handle_swl_location(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # Confirm the log to database for SWL
 async def handle_swl_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print('handle_swl_confirmation')
     if context.user_data.get("state") != "WAITING_FOR_SWL_CONFIRMATION":
         return
-
     user_input = update.message.text.lower()
+
     if user_input == "confirm":
         conn = db_connection()
         cursor = conn.cursor()
+        user_id = update.message.from_user.id
+        contact_with_username = context.user_data["contact_with"]
+        band_id = context.user_data["band_id"]
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        latitude = context.user_data['location'].latitude
+        longitude = context.user_data['location'].longitude
+        # Fetch the contact user's ID
+        cursor.execute("SELECT id FROM Users WHERE telegram_id = %s", (user_id,))
+        contact_from_id = cursor.fetchone()[0]
+
+
+
+        # Fetch the contact user's ID
+        cursor.execute("SELECT id FROM Users WHERE username = %s", (contact_with_username,))
+        contact_with_id = cursor.fetchone()[0]
 
         # Insert SWL log with band and location
         cursor.execute(
-            "INSERT INTO Contacts (user_id, contact_with_id, timestamp, latitude, longitude, band_id) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (user_id, contact_with_id, timestamp, latitude, longitude, band_id)
+            "INSERT INTO SWL (user_id, contact_with_id, timestamp, location, band_id) "
+            "VALUES (%s, %s, %s, POINT(%s, %s), %s)",
+            (contact_from_id, contact_with_id, timestamp, latitude, longitude, band_id)
         )
         conn.commit()
         await update.message.reply_text("SWL logged successfully!")
@@ -368,6 +419,32 @@ async def handle_swl_confirmation(update: Update, context: ContextTypes.DEFAULT_
 
     context.user_data.clear()
 
+
+
+async def handle_texts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await handle_contact_selection(update, context)
+    print('1')
+    await handle_band_selection(update, context)
+    print('2')
+    await handle_confirmation(update, context)
+    print('3')
+
+    await handle_swl_contact_selection(update, context)
+    print('4')
+    await handle_swl_band_selection(update, context)
+    print('5')
+    await handle_swl_confirmation(update, context)
+    print('6')
+    
+
+
+async def handle_locations(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await handle_swl_location(update, context)
+    print('l1')
+    await handle_contact_location(update, context)
+    print('l1')
+
+
 # Adding command handlers to the application
 def main():
     TOKEN = "1271390159:AAESblwx1Yg4ZHZG5AxPweQG07m5pN8YL6w"
@@ -377,14 +454,8 @@ def main():
     application.add_handler(CommandHandler("logcontact", log_contact))
     application.add_handler(CommandHandler("logswl", log_swl))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_selection))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_band_selection))
-    application.add_handler(MessageHandler(filters.LOCATION, handle_contact_location))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirmation))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_swl_contact_selection))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_swl_band_selection))
-    application.add_handler(MessageHandler(filters.LOCATION, handle_swl_location))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_swl_confirmation))
+    application.add_handler(MessageHandler(filters.LOCATION, handle_locations))
+    application.add_handler(MessageHandler(filters.TEXT, handle_texts))
 
     application.run_polling()
 
