@@ -41,3 +41,11 @@ CREATE TABLE Bands (
 );
 
 
+insert into Users(username,telegram_id) 
+    values
+      ("Artem's Beacon - EK/R2GEO", -1);
+
+
+INSERT INTO Bands(band_name)
+  VALUES 
+    ("14MHz/20m"),("7MHz/40m"),("27MHz/11m/CB"),("28MHz/10m"),("144 MHz/2m"),("433 MHz/70cm"),("other");
