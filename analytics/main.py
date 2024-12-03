@@ -80,12 +80,11 @@ def dashboard():
 
 
     map_fig = go.Figure()
-
     # Add lines and markers for each contact
     for _, row in df.iterrows():
         # Add line for contact
         map_fig.add_trace(
-            go.Scattergeo(
+            go.Scattermapbox(
                 lon=[row["user_longitude"], row["correspondent_longitude"]],
                 lat=[row["user_latitude"], row["correspondent_latitude"]],
                 mode="lines",
@@ -95,7 +94,7 @@ def dashboard():
         )
         # Add markers for user location
         map_fig.add_trace(
-            go.Scattergeo(
+            go.Scattermapbox(
                 lon=[row["user_longitude"]],
                 lat=[row["user_latitude"]],
                 mode="markers",
@@ -105,7 +104,7 @@ def dashboard():
         )
         # Add markers for correspondent location
         map_fig.add_trace(
-            go.Scattergeo(
+            go.Scattermapbox(
                 lon=[row["correspondent_longitude"]],
                 lat=[row["correspondent_latitude"]],
                 mode="markers",
@@ -116,21 +115,18 @@ def dashboard():
 
     # Update layout to make the map wider and adjust appearance
     # Update layout for OpenStreetMap
+    # Set OpenStreetMap as the map style
     map_fig.update_layout(
-        margin=dict(l=0, r=0, t=40, b=0),
+        mapbox=dict(
+            style="open-street-map",  # OpenStreetMap style
+            center=dict(lat=40.177940, lon=44.504754),  # Adjust map center if needed
+            zoom=12,  # Adjust zoom level
+        ),
         height=600,  # Set map height
         width=1200,  # Set map width
-        title="Contacts Map (Free OSM)"
+        title="Contacts Map",
+        showlegend=False
     )
-    map_fig.update_layout(map_style="dark")
-    # focus point
-    lat_foc = 40.177940
-    lon_foc = 44.504754
-    map_fig.update_layout(
-        geo = dict(
-            projection_scale=5000, #this is kind of like zoom
-            center=dict(lat=lat_foc, lon=lon_foc), # this will center on the point
-        ))    
     map_json = json.dumps(map_fig, cls=plotly.utils.PlotlyJSONEncoder)    # Generate map with lines for contacts
 
     # Render template

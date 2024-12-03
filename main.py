@@ -396,6 +396,7 @@ async def handle_swl_confirmation(update: Update, context: ContextTypes.DEFAULT_
 
 
         # Fetch the contact user's ID
+        cursor = conn.cursor()
         cursor.execute("SELECT id FROM Users WHERE username = %s", (contact_with_username,))
         contact_with_id = cursor.fetchone()[0]
 
