@@ -128,11 +128,12 @@ def dashboard():
         showlegend=False
     )
     map_json = json.dumps(map_fig, cls=plotly.utils.PlotlyJSONEncoder)    # Generate map with lines for contacts
-
+    tmp = df[['user', 'correspondent', 'correspondent_timestamp', 'user_latitude', 'user_longitude', 'correspondent_latitude', 'correspondent_longitude', 'user_band']]
+    tmp.columns = ['user', 'correspondent', 'timestamp', 'user_latitude', 'user_longitude', 'correspondent_latitude', 'correspondent_longitude', 'band']
     # Render template
     return render_template(
         "dashboard.html",
-        table=df.to_html(classes="table table-striped", index=False),
+        table=tmp.to_html(classes="table table-striped", index=False),
         chart_band=chart_band_json,
         chart_user=chart_user_json,
         map_json=map_json,

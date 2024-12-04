@@ -49,6 +49,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cursor.close()
         conn.close()
 
+# /setcall Command: Register user
+async def setcall(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.message.from_user.id
+
+    call = update.message.text.split(' ')[-1]
+    conn = db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE Users set callsign = (%s) where telegram_id = (%s)",
+            (call, telegram_id)
+        )
+        conn.commit()
+        await update.message.reply_text(
+            f"OK"
+        )
+    except:
+        await update.message.reply_text(
+            f"ERROR"
+        )
+    finally:
+        cursor.close()
+        conn.close()
+
 # /help Command: Provide detailed descriptions
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
@@ -68,6 +92,12 @@ async def log_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Fetch other users for selection
     cursor.execute("SELECT username FROM Users WHERE telegram_id != %s", (update.message.from_user.id,))
     users = cursor.fetchall()
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT callsign FROM Users WHERE telegram_id != %s", (update.message.from_user.id,))
+    user_calls = cursor.fetchall()
+
+    cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT band_name FROM Bands")  # Get available bands
     bands = cursor.fetchall()
     cursor.close()
@@ -78,10 +108,11 @@ async def log_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     usernames = [user["username"] for user in users]
+    calls = [user["callsign"] for user in user_calls]
     band_names = [band["band_name"] for band in bands]
 
     # Provide keyboard for user selection
-    keyboard = [[KeyboardButton(username)] for username in usernames]
+    keyboard = [[KeyboardButton(f"{callsign} - @{username}")] for username, callsign in zip(usernames, calls)]
     keyboard.append([KeyboardButton("Cancel")])
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
 
@@ -455,6 +486,7 @@ def main():
     application.add_handler(CommandHandler("logcontact", log_contact))
     application.add_handler(CommandHandler("logswl", log_swl))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("setcall",setcall))
     application.add_handler(MessageHandler(filters.LOCATION, handle_locations))
     application.add_handler(MessageHandler(filters.TEXT, handle_texts))
 
